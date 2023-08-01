@@ -1,8 +1,33 @@
-# Ethlas DApp
+# NFT DApp
+
+## Installation
+
+`npm install`
+
+### Frameworks/Libraries used
+1. `Next.js` - for application development
+2. `HardHat` - development framework for smart contracts
+3. `ethers.js` - for interacting with networks' EVM
+4. `OpenZeppelin` - for extending the contract standards used for creating tokens
 
 ## Getting Started
 
-First, run the development server:
+### Environment Variables
+
+Make sure these variables are specified in the `.env` file
+
+```
+// For connecting to the local database instance via Prisma client
+DATABASE_URL="postgresql://nftuser:password@localhost:5436/nftdb?schema=public"
+
+// Only when need to deploy to a test net
+ALCHEMY_API_KEY="<your-alchemy-api-key>"
+MNEMONIC="<your-account-mnemonic>"
+// A contract has already been deployed to Sepolia with address "0x781a3b2b16e585bd6d07b8244b1f3d9de40e12ec"
+NFT_CONTRACT_ADDRESS="<deploy-contract-address>"
+```
+
+Run the development server:
 
 ```bash
 npm run dev
@@ -14,27 +39,98 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can connect your MetaMask wallet by clicking the `Connect MetaMask` button
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+---
+## API
 
-## Learn More
+### Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+1. `GET /api/list-nfts` - fetch all the tokens minted from persistence storage
+2. `POST /api/mint-nft` - submit a transaction to the network to mint the token (untested)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Local development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+1. Run a docker container hosting PostgreSQL database locally `npm run start-docker-db` (to spin down container, simply run `npm run stop-docker-db`)
+2. Run `npm run prisma:migrate-deploy` to apply all pending migrations, and create the database if it does not exist.
+> **_NOTE:_** This will generate the Prisma Client types too (`npx prisma generate`)
 
-## Deploy on Vercel
+If the database schema changes, create a new migration by running `npm run prisma:migrate-dev`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
+## Smart Contract (NFT)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Followed the [ERC721](https://docs.openzeppelin.com/contracts/4.x/erc721) standard in developing the smart contract which is just a basic contract with an exposed `mintCard` function.
+
+> **DISCLAIMER:** The token assets are inspired by Hearthstone's Battlegrounds, any usage of card names and details are purely for hobby purpose without any commercial interest. All rights goes to [Blizzard Entertainment](https://www.blizzard.com/en-us/).
+
+Run script `./scripts/contract-event-listener.ts` to poll for event logs from the deployed contract and update the persistence. It listens to the `"Minted"` event whenever `mintCard` is called.
+
+### Local development
+
+1. Compile the contract(s) - `npm run compile-contracts`
+2. Run a blockchain locally using `hardhat` - `npm run deploy-contracts-local`
+3. Deploy contract(s) onto block chain - `npm run deploy-contracts-local`
+4. Either interact with the blockchain via the Next.js API or console (`npx hardhat console --network localhost`)
+
+### Deployment to TestNet (Sepolia)
+
+1. Compile the contract(s) - `npm run compile-contracts`
+2. Deploy contract(s) onto block chain - `npm deploy-contracts-testnet`
+
+## Future cross-region, scalable infrastructure design choices
+
+                       ┌───────────────────────────────────┐
+                       │          User / Client            │
+                       └───────────────────────────────────┘
+                                       │
+                                       ▼
+                       ┌───────────────────────────────────┐
+                       │        Amazon CloudFront          │
+                       └───────────────────────────────────┘
+                                       │
+                           ┌───────────▼───────────--┐
+                           │       Amazon API        │
+                           │   Gateway (Multi-Region)│
+                           └───────────┬───────────--┘
+                                       │
+            ┌──────────────────────────┼──────────────────────────┐
+            │                          │                           │
+        ┌─────▼─────┐             ┌─────▼─────┐             ┌─────▼─────┐
+        │ Region A  │             │ Region B  │             │ Region C  │
+        └─────┬─────┘             └─────┬─────┘             └─────┬─────┘
+              │                         │                        │
+              │                        │                        │
+     ┌────────▼────────┐      ┌────────▼────────┐      ┌────────▼────────┐
+     │ Amazon EC2 /   │      │ Amazon EC2 /   │        │ Amazon EC2 /   │
+     │  ECS Cluster   │      │  ECS Cluster   │        │  ECS Cluster   │
+     └────────┬───────┘      └────────┬───────┘        └────────┬───────┘
+              │                       │                        │
+              │                       │                        │
+              └──────▲────────────────┘                       │
+                     │                                       │
+                     │                                       │
+          ┌──────────▼─────────┐                 ┌──────────▼─────────┐
+          │ Amazon RDS /     │                  │ Amazon RDS /     │
+          │   Aurora (Multi- │                  │   Aurora (Multi- │
+          │     Region)      │                  │     Region)      │
+          └──────────────────┘                  └──────────────────┘
 
 
-## Smart Contract
+1. Multi-Region: Choose the AWS regions strategically to provide geographic redundancy and reduce latency for users. Consider regions that are close to target audience and have high availability.
 
-Standard for creating NFTs
-https://docs.openzeppelin.com/contracts/4.x/erc721
+2. Content Delivery Network (CDN): Utilize Amazon CloudFront, AWS's content delivery network, to cache and serve static content (images, videos, CSS, JS files) closer to end-users, reducing latency and improving performance.
+
+3. Database Replication: Implement cross-region replication for databases to ensure data redundancy and disaster recovery.Amazon RDS (Relational Database Service) and Amazon Aurora has built-in multi-region replication capabilities.
+
+4. Global Load Balancing: Amazon Route 53 has "Geolocation" routing policy to route users to the nearest available region based on their geographic location, reducing latency for end-users.
+
+5. Asynchronous Message queues: Use  asynchronous communication patterns like message queues (Amazon SQS) or event-driven architectures (AWS Lambda with Amazon SNS) for inter-region communication.
+
+6. Data Caching: Employ caching strategies to reduce database calls and improve response times. Services like Amazon ElastiCache can provide in-memory caching for frequently accessed data.
+
+7. Observability: Use AWS CloudWatch to monitor the performance and health of infrastructure across regions.
+
+## TODOs
+1. Complete Next.js application (frontend integration with API)
+2. Hosting dApp on Vercel
