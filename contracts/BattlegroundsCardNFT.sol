@@ -3,10 +3,12 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
 
 contract BattlegroundsCardNFT is ERC721URIStorage, Ownable {
-    uint private nextTokenId = 1;
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
     
     // Struct to store card data
     struct Card {
@@ -17,6 +19,16 @@ contract BattlegroundsCardNFT is ERC721URIStorage, Ownable {
         uint tavernTier;
         // Include card effects in future versions
     }
+
+    event Mint(
+        uint _tokenId,
+        string _tokenURI,
+        string name,
+        string minionType,
+        uint baseAttackStat,
+        uint baseHealthStat,
+        uint tavernTier
+    );
     
     // Mapping to associate each NFT token ID with its card data
     mapping(uint => Card) private _cards;
@@ -24,27 +36,34 @@ contract BattlegroundsCardNFT is ERC721URIStorage, Ownable {
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
     function mintCard(
-        address _to,
         string calldata _name,
         string calldata _minionType,
         uint _baseAttackStat,
         uint _baseHealthStat,
         uint _tavernTier,
-        string calldata tokenURI
-    ) external onlyOwner returns (uint) {
-        uint newCardId = nextTokenId;
+        string calldata _tokenURI
+    ) external onlyOwner returns (uint256) {
+        uint256 newTokenId = _tokenIds.current();
         // Ensure that the token ID has not been used before
-        require(!_exists(newCardId), "Token ID already in use.");
+        require(!_exists(newTokenId), "Token ID already in use.");
         
-        console.log(_to, nextTokenId);
-        // Mint the NFT
-        _safeMint(_to, nextTokenId);
-        console.log("minted");
+        // Only owner of contract can mint the NFT
+        _safeMint(msg.sender, newTokenId);
 
         // Emit event
-        
+        emit Mint(
+            newTokenId,
+            _tokenURI,
+            _name,
+            _minionType,
+            _baseAttackStat,
+            _baseHealthStat,
+            _tavernTier
+        );
+
         // Assign token URI and increment id
-        _setTokenURI(newCardId, tokenURI);
+        _setTokenURI(newTokenId, _tokenURI);
+        _tokenIds.increment();
 
         // Store the card data
         Card memory card = Card({
@@ -54,11 +73,9 @@ contract BattlegroundsCardNFT is ERC721URIStorage, Ownable {
             baseHealthStat: _baseHealthStat,
             tavernTier: _tavernTier
         });
-        _cards[newCardId] = card;
+        _cards[newTokenId] = card;
 
-        // Increment token
-        nextTokenId++;
-        return newCardId;
+        return newTokenId;
     }
 
     function burnCard(uint _tokenId) external onlyOwner {

@@ -1,3 +1,5 @@
+const { startEventListener } = require("./contract-event-listener");
+
 async function main () {
   // We get the contract to deploy
   const NFT = await ethers.getContractFactory('BattlegroundsCardNFT');
@@ -5,6 +7,8 @@ async function main () {
   const nft = await NFT.deploy('BattlegroundsCardNFT', 'BGC');
   await nft.deployed();
   console.log('NFT deployed to:', nft.address);
+  // Start event listener
+  await startEventListener(nft.address);
 }
 
 main()

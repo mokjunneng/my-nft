@@ -11,7 +11,8 @@ datasource db {
 }
 
 model BattlegroundsCardNft {
-  tokenId String @id
+  tokenId Int @id
+  tokenUri String
   name String
   minionType String
   baseAttackStat Int
