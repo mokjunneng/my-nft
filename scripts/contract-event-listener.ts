@@ -12,11 +12,12 @@ const persistence = new NFTPersistence(dbClient);
 
 // Listens to events emitted by the contract and update persistence
 export async function startEventListener(address: string) {
-  const providerUrl = "http://127.0.0.1:8545/"
-  const provider = new ethers.providers.JsonRpcProvider(providerUrl);
-  // const provider = new ethers.providers.WebSocketProvider(
-  //   `wss://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`
-  // );
+  // For local development:
+  // const providerUrl = "http://127.0.0.1:8545/"
+  // const provider = new ethers.providers.JsonRpcProvider(providerUrl);
+  const provider = new ethers.providers.WebSocketProvider(
+    `wss://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+  );
   const contract = new ethers.Contract(address, nftAbi.abi, provider);
   console.log("Listening to contract of address: ", address);
   contract.on("Mint", async (tokenId, tokenURI, name, minionType, baseAttackStat, baseHealthStat, tavernTier) => {
@@ -30,6 +31,7 @@ export async function startEventListener(address: string) {
       tavernTier: tavernTier.toNumber()
     }
     console.log(JSON.stringify(mintedNft));
-    await persistence.recordNft(mintedNft)
+    await persistence.saveToken(mintedNft)
   });
 }
+startEventListener(process.env.NFT_CONTRACT_ADDRESS ?? '');

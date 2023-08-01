@@ -1,15 +1,13 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-ethers";
-
-// TODO: Secure these secrets
-const { alchemyApiKey, mnemonic } = require('./secrets.json');
+require("dotenv").config();
 
 const config: HardhatUserConfig = {
   solidity: "0.8.19",
   networks: {
-    goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${alchemyApiKey}`,
-      accounts: { mnemonic },
+    sepolia: {
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: { mnemonic: process.env.MNEMONIC },
     }
   }
 };

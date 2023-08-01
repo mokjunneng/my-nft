@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 export class NFTPersistence {
   constructor(private readonly dbClient: PrismaClient) {}
 
-  async recordNft(nft: BattlegroundsCardNFT) {
+  async saveToken(nft: BattlegroundsCardNFT) {
     const {
       tokenId,
       tokenUri,
@@ -14,7 +14,7 @@ export class NFTPersistence {
       baseHealthStat,
       tavernTier,
     } = nft;
-    const existingNft = this.dbClient.battlegroundsCardNft.findUnique({
+    const existingNft = await this.dbClient.battlegroundsCardNft.findUnique({
       where: { tokenId },
     });
     // Skip creation of NFTs that already existed
@@ -34,7 +34,7 @@ export class NFTPersistence {
   }
 
   // Get all saved NFT records without filter
-  async listNfts(): Promise<BattlegroundsCardNFT[]> {
+  async getAllTokens(): Promise<BattlegroundsCardNFT[]> {
     return this.dbClient.battlegroundsCardNft.findMany();
   }
 }

@@ -10,7 +10,7 @@
     "prepare": "husky install",
     "compile-contracts": "hardhat compile",
     "deploy-contracts-local": "hardhat run --network localhost scripts/deploy.js",
-    "deploy-contracts-testnet": "hardhat run --network goerli scripts/deploy.js",
+    "deploy-contracts-testnet": "hardhat run --network sepolia scripts/deploy.js",
     "test-contracts": "hardhat test",
     "start-local-blockchain": "hardhat node",
     "prisma:generate": "prisma generate",
