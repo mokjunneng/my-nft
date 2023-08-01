@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  nfft-db:
+    image: postgres:latest
+    container_name: nft-db
+    environment:
+      POSTGRES_USER: nftuser
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: nftdb
+    ports:
+      - 5436:5432
+    volumes:
+      - nft-data:/var/lib/postgresql/data
+
+volumes:
+  nft-data:
