@@ -1,4 +1,7 @@
-export type MintBattlegroundsCardNFTRequest = BattlegroundsCardNFT;
+export type MintBattlegroundsCardNFTRequest = Omit<
+  BattlegroundsCardNFT,
+  "tokenId"
+>;
 
 export interface BattlegroundsCardNFT {
   tokenId: number;
